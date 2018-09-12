@@ -1,0 +1,71 @@
+// AutoCircum
+// Last edited 180912 by S. Dundon
+// Initially by Chad McCormick Pollard Lab 6 June 2008
+// Purpose: Automatically determine circumference vs time for kymograph of contractile ring
+// Input: Contractile ring kymograph oriented horizontally and pixel size set to reflect true size using Analyze>Set Scale.
+// Output: Thresholded image displaying the area that was processed (black on white). Data window with circumference of ring over time (x-axis), save as a text file or copy into a spreadsheet program like MATLAB or Excel.
+// Potentially necessary modifications:
+// 001 - Pixel size on our microscope for these movies is 0.139 μm/pixel. Change this to match your system.
+// Other notes: 
+// If center of ring is sufficiently dim, it may be necessary to fill in this area manually for proper processing. Be sure to examine the thresholded image that is produced and compare with original image and make sure middle part of ring is detected.
+// This is not a batch process, each kymograph needs to be opened and processed individually. 
+
+// Reslice image to individual time points and threshold
+title1=getTitle(); 
+selectWindow(title1);
+run("Set Scale...", "distance=0 known=0 pixel=1 unit=pixel");
+run("Duplicate...", " duplicate");
+title2=getTitle();
+selectWindow(title2);
+setAutoThreshold();
+run("Convert to Mask");
+run("Invert");
+width=getWidth();
+run("Canvas Size...", "width="+width+2+" position=Center zero");
+run("Invert");
+run("Fill Holes");
+run("Canvas Size...", "width="+width+" position=Center zero");
+//run("Invert");
+
+run("Reslice [/]...", "input=1.000 output=1.000 start=Left rotate");
+rename("Reslice");
+selectWindow("Reslice");
+setAutoThreshold();
+getThreshold(lower, upper);
+getMinAndMax(min,max);
+setThreshold(upper,max);
+
+// Get Lengths
+for(i=0;i<nSlices;i++){
+	setSlice(i+1);
+	run("Create Selection");
+	if (selectionType() != -1){
+		roiManager("Add");
+	}
+}
+selectWindow("Reslice");
+run("Set Measurements...", "area redirect=None decimal=2");
+roiManager("Deselect");
+roiManager("Measure");
+
+// Print segmented results
+title="[Circumference Over Time]";
+run("New... ", "name="+title+" type=Table");
+print(title,"\\Headings:Time Point\tDiameter(pixels)\tCircumference(um)");
+count=roiManager("count");
+for(i=0;i<count;i++){
+	length=getResult("Area",i);
+//001	
+	circum=length*3.14159265*0.139;
+	print(title,i+1+"\t"+length+"\t"+circum);
+}
+
+// Clean Up Windows
+selectWindow("Results");
+run("Close");
+selectWindow("Reslice");
+run("Close");
+selectWindow("ROI Manager");
+run("Close");
+
+	

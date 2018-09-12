@@ -1,0 +1,131 @@
+//Hyperstack processing macro, last edited 180912 by S. Dundon
+//Open as Macro in ImageJ/Fiji and set language to IJ1 Macro
+//Input: Time series acquisition containing multiple channels and time points but read out by Fiji/ImageJ as a single stack.
+//Output: Hyperstack with channels, Z slices, and time points with prefix "J_" and a max projection version of same acquisition with prefix "MAX_J_"
+//Potentially necessary modifications:
+// 001 - Due to a bug in the micromanager OBIS driver we have a single blank image as the initial slice at the start of each time point. This is unlikely to be necessary for other systems so set default to FALSE.
+// 002 - Our images are saved in XYZCT format, if another image ordering system is used, change this.
+// 003 - Typically we only have two channels, so only two colors are specified by this macro, magenta and green. Change these/add colors here.
+// 004 - I prefix these processed images with J_ and MAX_J_. Change the naming convention here.
+
+print("Select folder containing unprocessed images");
+imageDir = getDirectory("Choose a Directory");
+
+print("Select folder to save processed images");
+processedDir = getDirectory("Choose a Directory");
+
+Dialog.create("Choose parameters");
+	Dialog.addNumber("Number of Channels:", 2);
+	Dialog.addNumber("Number of Slices", 12);
+//001
+	Dialog.addCheckbox("Single DIC slice present?", true);
+	Dialog.addChoice("Folder of images or single .ome.tif stack?", newArray("Folder","Stack"), "Stack");
+	Dialog.show();
+	nChannel = Dialog.getNumber;
+	nSlice = Dialog.getNumber;
+	DIC = Dialog.getCheckbox;
+	type = Dialog.getChoice;
+
+if (type == "Folder") {
+	Dialog.create("Choose parameters");
+	Dialog.addCheckbox("Metadata file present?", true);
+	Dialog.show();
+	XY = Dialog.getCheckbox;
+}
+
+else {
+	XY = 0;
+}
+
+list = getFileList(imageDir);
+print(list.length-XY, "files detected");
+allSlice = (nChannel*nSlice)+DIC;
+
+if (XY == 0) {
+	factor = 1;
+}
+
+else {
+	factor = 0;
+}
+
+
+for(i=XY; i<list.length; i++) {
+	print("Processing image", i+factor);
+
+	fName = list[i];
+	fPath = imageDir + fName;
+
+	if (type == "Folder") {
+		run("Image Sequence...", "open=["+fPath+"] sort");
+
+		getDimensions(width, height, channels, slices, frames);
+		nTime = slices/allSlice;
+//002
+		run("Stack to Hyperstack...", "order=xyzct channels=1 slices=["+allSlice+"] frames=["+nTime+"] display=Composite");
+		if (DIC == 1) {
+			run("Delete Slice", "delete=slice");
+		}
+		run("Stack to Hyperstack...", "order=xyzct channels=["+nChannel+"] slices=["+nSlice+"] frames=["+nTime+"] display=Composite");
+//003
+		Stack.setPosition(1,1,1);
+		run("Green");
+		run("Enhance Contrast", "saturated=0.35");
+		Stack.setPosition(2,1,1);
+		run("Magenta");
+		run("Enhance Contrast", "saturated=0.025");
+//004
+		sName = substring(fName, 0, lengthOf(fName)-1);
+		saveAs("Tiff",processedDir+"J_"+sName);
+
+		run("Z Project...", "projection=[Max Intensity] all");
+
+		Stack.setPosition(1,1,1);
+		run("Enhance Contrast", "saturated=0.35");
+		Stack.setPosition(2,1,1);
+		run("Enhance Contrast", "saturated=0.025");
+//004
+		saveAs("Tiff",processedDir+"MAX_J_"+sName);
+		run("Close All");
+	}
+
+	else {
+		open(fPath);
+
+		getDimensions(width, height, channels, slices, frames);
+		nTime = slices/allSlice;
+//002
+		run("Stack to Hyperstack...", "order=xyzct channels=1 slices=["+allSlice+"] frames=["+nTime+"] display=Composite");
+		if (DIC == 1) {
+			run("Delete Slice", "delete=slice");
+		}
+		run("Stack to Hyperstack...", "order=xyzct channels=["+nChannel+"] slices=["+nSlice+"] frames=["+nTime+"] display=Composite");
+//003
+		Stack.setPosition(2,1,1);
+		run("Green");
+		run("Enhance Contrast", "saturated=0.35");
+		Stack.setPosition(1,1,1);
+		run("Magenta");
+		run("Enhance Contrast", "saturated=0.025");
+
+		if (nTime == 1) {
+			sName = substring(fName, 0, lengthOf(fName)-1);
+		}
+		else {
+			sName = substring(fName, 0, lengthOf(fName)-7);
+		}
+
+		saveAs("Tiff",processedDir+"J_"+sName);
+
+		run("Z Project...", "projection=[Max Intensity] all");
+
+		Stack.setPosition(2,1,1);
+		run("Enhance Contrast", "saturated=0.35");
+		Stack.setPosition(1,1,1);
+		run("Enhance Contrast", "saturated=0.025");
+		saveAs("Tiff",processedDir+"MAX_J_"+sName);
+		run("Close All");
+	}
+	run("Collect Garbage");
+}
+print("Operation complete");

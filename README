@@ -1,0 +1,10 @@
+This repository contains the image processing macros I most frequently use for S. pombe cytokinesis work.
+
+uMHyperstackProcess: When initially opening time-lapse, multi-channel images acquired in Micromanager 1.4, these are read by my Fiji as a single large stack instead of a hyperstack.
+This macro reads all of the images in a folder and processes them into a) a hyper stack with appropriate channels and time points, and b) a Max Z-projection image of the time series. These are saved in a specified output folder.
+For user-friendliness, this macro opens a dialogue box to request the locations of input files and output folder, as well as inquiring about the number of slices and channels. It will calculate the number of time points on its own, but this fails if an incomplete time point (e.g. not the whole z-series) is included at the end.
+The dialogue box can easily be eliminated by users who find this more laborious.
+
+AutoCircum: This takes one kymograph of a cytokinetic event with labeled ring and reports the circumference over time.
+The input image must already have the pixel size set in Analyze>Set Scale, and must be oriented such that time is the x-axis.
+Details on specifying the pixel size of of your microscope setup within the macro for circumference measurements.
